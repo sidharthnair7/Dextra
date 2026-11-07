@@ -1,0 +1,9 @@
+target/
+.idea/
+*.iml
+out/
+# Sample hand photos used only by local tests (not ours to publish)
+test-data/
+# Local secrets
+.env
+application-local.properties
