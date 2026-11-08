@@ -47,6 +47,31 @@ public class FingerLock {
         return i;
     }
 
+    /** Where the instrument goes and how open its jaws are, from one frame's fingertips. */
+    public record Steer(double x, double y, double gap) {
+    }
+
+    /**
+     * The point halfway between the two locked fingertips (the instrument's tip, and the drill's pointer), and the gap
+     * between them in palm widths (the jaws: a pinch closes them). gap is -1 when the palm width isn't known.
+     *
+     * @param aspect frame height divided by width, so y distances count the same as x
+     */
+    public Steer steer(double[] tips, double palm, double aspect) {
+        int a;
+        int b;
+        synchronized (this) {
+            a = first;
+            b = second;
+        }
+        double x = (tips[2 * a] + tips[2 * b]) / 2;
+        double y = (tips[2 * a + 1] + tips[2 * b + 1]) / 2;
+        double gap = palm > 0
+                ? Math.hypot(tips[2 * a] - tips[2 * b], (tips[2 * a + 1] - tips[2 * b + 1]) * aspect) / palm
+                : -1;
+        return new Steer(x, y, gap);
+    }
+
     /** The pair as finger numbers, thumb = 0 to pinky = 4, lower first. */
     public synchronized int[] pair() {
         return new int[]{first, second};

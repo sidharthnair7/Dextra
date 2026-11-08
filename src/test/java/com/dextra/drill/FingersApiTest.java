@@ -81,4 +81,25 @@ class FingersApiTest {
         assertEquals("{\"type\":\"pinch\",\"fingers\":[\"thumb\",\"index\"],\"count\":2,\"of\":3}",
                 PinchLockService.progressJson(new PinchDetector.Progress(0, 1, 2)));
     }
+
+    @Test
+    void theInstrumentGoesBetweenTheLockedFingersAndTheGapWorksTheJaws() {
+        double[] tips = {0.40, 0.50, 0.50, 0.50, 0.60, 0.20, 0.70, 0.24, 0.80, 0.30};
+        FingerLock lock = new FingerLock();                     // thumb + index
+        FingerLock.Steer s = lock.steer(tips, 0.10, 0.75);
+        assertEquals(0.45, s.x(), 1e-9);
+        assertEquals(0.50, s.y(), 1e-9);
+        assertEquals(1.0, s.gap(), 1e-9);                       // 0.1 apart = one palm width
+
+        lock.set("thumb", "middle", "tap");                     // someone without an index finger
+        s = lock.steer(tips, 0.10, 0.75);
+        assertEquals(0.50, s.x(), 1e-9);
+        assertEquals(0.35, s.y(), 1e-9);
+        assertEquals(Math.hypot(0.20, 0.30 * 0.75) / 0.10, s.gap(), 1e-9);   // y counts at the frame's aspect
+
+        assertEquals(-1, lock.steer(tips, 0, 0.75).gap(), 1e-9);  // no palm width, no gap
+
+        String json = new TrackPoint(5, true, 0.45, 0.5, 0.9, 30, tips, 0.1, 1.0).toJson();
+        assertTrue(json.endsWith(",\"palm\":0.1000,\"gap\":1.000}"), json);
+    }
 }

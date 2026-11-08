@@ -7,18 +7,25 @@ import java.util.Locale;
  *
  * @param t          milliseconds since tracking started
  * @param found      false when no hand was found with enough confidence
- * @param x          index fingertip x, 0 to 1 across the mirrored camera image (the drill's pointer)
- * @param y          index fingertip y, 0 to 1 down the image
+ * @param x          the drill's pointer: the point between the two locked fingertips, 0 to 1 across the mirrored image
+ * @param y          the same point, 0 to 1 down the image
  * @param confidence hand-model confidence, 0 to 1
  * @param fps        frames per second, smoothed
  * @param tips       all five fingertips, thumb to pinky, as x0, y0, ..., x4, y4 in the same 0 to 1 units; null if not known
  * @param palm       palm width (index knuckle to pinky knuckle) as a share of the frame width; 0 if not known
+ * @param gap        distance between the two locked fingertips in palm widths (drives the jaws); -1 if not known
  */
-public record TrackPoint(long t, boolean found, double x, double y, double confidence, double fps, double[] tips, double palm) {
+public record TrackPoint(long t, boolean found, double x, double y, double confidence, double fps,
+                         double[] tips, double palm, double gap) {
 
     /** A frame without the per-finger detail (no hand, or tests that only need the pointer). */
     public TrackPoint(long t, boolean found, double x, double y, double confidence, double fps) {
-        this(t, found, x, y, confidence, fps, null, 0);
+        this(t, found, x, y, confidence, fps, null, 0, -1);
+    }
+
+    /** A frame with the fingertips but no gap. */
+    public TrackPoint(long t, boolean found, double x, double y, double confidence, double fps, double[] tips, double palm) {
+        this(t, found, x, y, confidence, fps, tips, palm, -1);
     }
 
     public String toJson() {
@@ -38,6 +45,10 @@ public record TrackPoint(long t, boolean found, double x, double y, double confi
             }
             sb.append(String.format(Locale.ROOT, "[%.4f,%.4f]", tips[2 * k], tips[2 * k + 1]));
         }
-        return sb.append(String.format(Locale.ROOT, "],\"palm\":%.4f}", palm)).toString();
+        sb.append(String.format(Locale.ROOT, "],\"palm\":%.4f", palm));
+        if (gap >= 0) {
+            sb.append(String.format(Locale.ROOT, ",\"gap\":%.3f", gap));
+        }
+        return sb.append('}').toString();
     }
 }

@@ -1,5 +1,6 @@
 package com.dextra.live;
 
+import com.dextra.drill.FingerLock;
 import com.dextra.vision.HandFinder;
 import com.dextra.vision.HandPose;
 import org.bytedeco.javacpp.BytePointer;
@@ -35,6 +36,7 @@ public class FingertipTracker implements SmartLifecycle {
     private static final Logger log = LoggerFactory.getLogger(FingertipTracker.class);
 
     private final LiveSocket socket;
+    private final FingerLock fingers;
     private final List<TrackPointListener> listeners;
     private final boolean enabled;
     private final int cameraIndex;
@@ -59,6 +61,7 @@ public class FingertipTracker implements SmartLifecycle {
     private volatile Preview preview;
 
     public FingertipTracker(LiveSocket socket,
+                            FingerLock fingers,
                             List<TrackPointListener> listeners,
                             @Value("${dextra.camera.enabled:true}") boolean enabled,
                             @Value("${dextra.camera.index:0}") int cameraIndex,
@@ -67,6 +70,7 @@ public class FingertipTracker implements SmartLifecycle {
                             @Value("${dextra.palm.score-threshold:0.6}") double palmThreshold,
                             @Value("${dextra.hand.confidence-threshold:0.8}") double handThreshold) {
         this.socket = socket;
+        this.fingers = fingers;
         this.listeners = listeners;
         this.enabled = enabled;
         this.cameraIndex = cameraIndex;
@@ -217,10 +221,16 @@ public class FingertipTracker implements SmartLifecycle {
                 long t = (now - t0) / 1_000_000;
                 double w = mirrored.cols();
                 double h = mirrored.rows();
-                TrackPoint p = pose == null
-                        ? new TrackPoint(t, false, 0, 0, 0, fps)
-                        : new TrackPoint(t, true, pose.fingertipX() / w, pose.fingertipY() / h, pose.confidence(), fps,
-                        pose.fingertips(w, h), pose.palmWidth(w));
+                TrackPoint p;
+                if (pose == null) {
+                    p = new TrackPoint(t, false, 0, 0, 0, fps);
+                } else {
+                    // The pointer is the point between the two locked fingertips; their gap drives the jaws.
+                    double[] tips = pose.fingertips(w, h);
+                    double palm = pose.palmWidth(w);
+                    FingerLock.Steer s = fingers.steer(tips, palm, h / w);
+                    p = new TrackPoint(t, true, s.x(), s.y(), pose.confidence(), fps, tips, palm, s.gap());
+                }
                 last = p;
                 socket.broadcast(p.toJson());
                 for (TrackPointListener l : listeners) {
