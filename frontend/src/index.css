@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* DEXTRA's light look: warm paper, near-black ink, and the robot arm's orange for anything measured and for the main
+   action. Green is kept for one thing: a ring you hit, or a number that got better. Token names match SightSeen's
+   so the shared components work unchanged ("tape" is the accent). */
+@theme {
+  --color-paper: #f6f5f2;
+  --color-ink: #16181d;
+  --color-steel: #5d6470;
+  --color-hair: #dedbd4;
+  --color-tape: #ff6a2b;
+  --color-mint: #1f9d55;
+  --color-alert: #d03b3b;
+  --font-sans: "Archivo", "Segoe UI", system-ui, sans-serif;
+}
+
+:root {
+  font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+  color: #16181d;
+  background: #f6f5f2;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  background: #f6f5f2;
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem; /* the floating nav's height */
+}
+
+body { min-width: 320px; min-height: 100vh; margin: 0; background: #f6f5f2; }
+
+.font-display {
+  font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+  font-stretch: 122%;
+  font-variation-settings: "wdth" 122;
+  letter-spacing: -0.035em;
+}
+
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+
+::selection { background: #ff6a2b; color: #16181d; }
+
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+.animate-float { animation: float 6s ease-in-out infinite; }
+.animate-pulse-dot { animation: pulse-dot 1.6s ease-in-out infinite; }
+
+/* Glass on the light pages (from Remembrance, via SightSeen) */
+.liquid-glass {
+  position: relative;
+  background: rgba(255, 255, 255, 0.58);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.7), 0 10px 34px rgba(22, 24, 29, 0.07);
+}
+.liquid-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.2px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.3) 22%, rgba(255, 255, 255, 0) 42%, rgba(255, 255, 255, 0) 58%, rgba(255, 255, 255, 0.35) 80%, rgba(255, 255, 255, 0.85));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}

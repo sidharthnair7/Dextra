@@ -7,3 +7,8 @@ test-data/
 # Local secrets
 .env
 application-local.properties
+
+# Local AI tooling and planning notes (kept on this laptop, not published)
+.claude/
+.plans/
+CHECKLIST.md
