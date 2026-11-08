@@ -4,7 +4,7 @@
 
 DEXTRA turns a laptop webcam into a hand precision trainer. You move two fingers, a 3D robotic instrument copies them, and DEXTRA measures how precisely you moved, with numbers it can explain. When tracking isn't good enough to trust, it refuses to score and tells you why.
 
-Built at HackTrent 2026 by Sidharth Nair and Trinidad Laguardia.
+Built at HackTrent 2026 by Trinidad Laguardia and Sidharth Nair.
 
 > **What it is and isn't:** practice plus measured evidence of hand precision, for people like medical students who want feedback on fine motor control. It is not surgical training, not a grade, and not a diagnosis.
 
