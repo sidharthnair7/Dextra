@@ -17,8 +17,8 @@
     <description>Webcam fingertip precision trainer, built at HackTrent 2026</description>
 
     <properties>
-        <!-- 21 so it runs on any laptop with JDK 21 or newer -->
-        <java.version>21</java.version>
+        <!-- 17 so it runs on any laptop with JDK 17 or newer -->
+        <java.version>17</java.version>
         <javacv.version>1.5.14</javacv.version>
         <opencv.version>4.14.0-1.5.14</opencv.version>
         <openblas.version>0.3.34-1.5.14</openblas.version>

@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DEXTRA</title>
+<style>
+  :root {
+    --bg: #0b0e13;
+    --panel: rgba(16, 20, 28, 0.82);
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #e8ecf2;
+    --muted: #8b95a5;
+    --accent: #ff6a2b;
+    --ok: #3ddc84;
+    --warn: #ffb020;
+    --bad: #ff4d5e;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+    font: 14px/1.4 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  #scene { position: fixed; inset: 0; display: block; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  header.panel { top: 16px; left: 16px; padding: 14px 18px; }
+  header h1 { margin: 0; font-size: 20px; letter-spacing: 0.18em; font-weight: 800; }
+  header h1 span { color: var(--accent); }
+  header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+  #chips { top: 16px; right: 16px; padding: 10px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 60vw; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--line); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  .dot.warn { background: var(--warn); }
+  .dot.bad { background: var(--bad); }
+  #controls { bottom: 16px; left: 50%; transform: translateX(-50%); padding: 12px; display: flex; gap: 10px; align-items: center; }
+  button { font: inherit; font-weight: 650; color: var(--text); background: rgba(255,255,255,0.07); border: 1px solid var(--line);
+    padding: 10px 16px; border-radius: 10px; cursor: pointer; transition: background .15s, transform .1s; }
+  button:hover { background: rgba(255,255,255,0.13); }
+  button:active { transform: scale(0.97); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: transparent; color: #140a05; }
+  button.primary:hover { background: #ff8247; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #progress { min-width: 150px; padding: 0 6px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+  #progress b { color: var(--text); }
+  #banner { bottom: 86px; left: 50%; max-width: calc(100vw - 32px); text-align: center; transform: translateX(-50%); padding: 8px 14px; font-weight: 600; display: none; }
+  #banner.show { display: block; }
+  #banner.warn { border-color: rgba(255,176,32,.5); color: var(--warn); }
+  #banner.sim { border-color: rgba(255,106,43,.6); color: var(--accent); }
+  #results { top: 86px; right: 16px; width: min(360px, calc(100vw - 32px)); padding: 16px; max-height: calc(100vh - 190px); overflow: auto;
+    transform: translateX(calc(100% + 32px)); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+  #results.open { transform: none; }
+  #results h2 { margin: 0 0 4px; font-size: 15px; }
+  #results .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .gauge { background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
+  .gauge svg { width: 100%; max-width: 120px; height: auto; display: block; margin: 0 auto; }
+  .gauge .name { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .gauge .formula { font-size: 10.5px; color: var(--muted); margin-top: 4px; line-height: 1.3; }
+  .msg { margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--line); font-size: 13px; }
+  .msg .who { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 4px; }
+  .msg.bad { border-color: rgba(255,77,94,.45); }
+  .msg.good { border-color: rgba(61,220,132,.45); }
+  ul.reasons { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 12.5px; }
+  .close { position: absolute; top: 10px; right: 10px; padding: 4px 9px; font-size: 12px; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #cam { bottom: 16px; left: 16px; width: 208px; padding: 8px; }
+  .camwrap { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 9px; overflow: hidden; background: #05070a; }
+  .camwrap img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+  .camwrap.sim { background: repeating-linear-gradient(0deg, transparent 0 23px, rgba(255,255,255,.05) 23px 24px),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(255,255,255,.05) 23px 24px), #070a0f; }
+  .camwrap .simlabel { position: absolute; left: 8px; top: 6px; font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
+  .camwrap .off { position: absolute; inset: 0; display: none; place-items: center; color: var(--muted); font-size: 12px; text-align: center; padding: 10px; }
+  .camwrap.nocam .off { display: grid; }
+  .tipdot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 0 2px #fff, 0 0 10px var(--accent); display: none; }
+  .edge { position: absolute; background: var(--accent); opacity: 0; box-shadow: 0 0 12px var(--accent); }
+  .edge.top { top: 0; left: 0; right: 0; height: 5px; } .edge.bottom { bottom: 0; left: 0; right: 0; height: 5px; }
+  .edge.left { top: 0; bottom: 0; left: 0; width: 5px; } .edge.right { top: 0; bottom: 0; right: 0; width: 5px; }
+  .edge.on { opacity: 1; animation: blink .8s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  #cam .cap { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+  @media (max-width: 720px) { #cam { width: 132px; bottom: 92px; } #cam .cap { display: none; } #chips { max-width: calc(100vw - 32px); top: 96px; right: 16px; left: 16px; justify-content: flex-start; } #results { top: 150px; } }
+  @media (prefers-reduced-motion: reduce) { #results { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="3D view of a robotic arm whose instrument follows your fingertip over a practice pad with five target rings" role="img"></canvas>
+
+<header class="panel">
+  <h1>DEX<span>TRA</span></h1>
+  <p>Control with precision. Improve with evidence.</p>
+</header>
+
+<div id="chips" class="panel" aria-label="Live tracking status">
+  <span class="chip"><span id="camDot" class="dot"></span><span id="camText">Connecting</span></span>
+  <span class="chip"><span id="handDot" class="dot"></span><span id="handText">Hand: none</span></span>
+  <span class="chip" id="fpsText">0 fps</span>
+  <span class="chip" id="confText">conf -</span>
+  <span class="chip"><span id="gemDot" class="dot"></span><span id="gemText">Gemini</span></span>
+</div>
+
+<div id="banner" class="panel" role="status"></div>
+
+<aside id="results" class="panel" aria-live="polite" aria-labelledby="resultsTitle">
+  <button class="close" id="closeResults" aria-label="Close results">Close</button>
+  <h2 id="resultsTitle">Results</h2>
+  <div id="resultsBody"></div>
+</aside>
+
+<div id="controls" class="panel">
+  <button id="checkBtn">Setup check</button>
+  <button id="startBtn" class="primary">Start drill</button>
+  <div id="progress" aria-live="polite"><b id="hitCount">0</b> / 5 targets · <span id="timer">0.0</span> s</div>
+</div>
+
+<div id="cam" class="panel" aria-label="Camera preview">
+  <div class="camwrap" id="camWrap">
+    <img id="camImg" alt="Your camera, mirrored. It stays on this laptop.">
+    <span class="tipdot" id="camTip"></span>
+    <span class="edge top"></span><span class="edge bottom"></span><span class="edge left"></span><span class="edge right"></span>
+    <div class="off">Camera preview unavailable</div>
+  </div>
+  <div class="cap">Your camera, mirrored. Stays on this laptop.<br>Drag the scene to orbit · scroll to zoom</div>
+</div>
+<div id="live" class="sr" aria-live="assertive"></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ---------- Geometry that must match the Java side ----------
+// Fingertip x,y arrive as 0..1 of the mirrored camera image. Java's hit test is
+// hypot(dx, dy * ASPECT) <= r, so the pad is PAD_W wide and PAD_W * ASPECT deep,
+// and a ring's world radius is r * PAD_W. Then a ring lights exactly when Java counts the hit.
+const ASPECT = 480 / 640;
+const PAD_W = 1.6, PAD_D = PAD_W * ASPECT;
+const HOVER = 0.03;                      // instrument tip height above the pad
+const toWorld = (x, y) => new THREE.Vector3((x - 0.5) * PAD_W, HOVER, (y - 0.5) * PAD_D);
+const SIM = new URLSearchParams(location.search).has('sim');
+
+// ---------- Renderer, camera, lights ----------
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0b0e13);
+scene.fog = new THREE.Fog(0x0b0e13, 5, 11);
+
+const camera = new THREE.PerspectiveCamera(42, 1, 0.05, 50);
+camera.position.set(0.55, 1.95, 1.8);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(-0.2, 0.15, -0.05);
+controls.enableDamping = true;
+controls.minDistance = 1.4; controls.maxDistance = 5;
+controls.maxPolarAngle = Math.PI * 0.47;
+
+scene.add(new THREE.HemisphereLight(0xcfe3ff, 0x1a1410, 0.55));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(1.8, 3.2, 1.4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+Object.assign(key.shadow.camera, { left: -2.2, right: 2.2, top: 2.2, bottom: -2.2, near: 0.5, far: 8 });
+key.shadow.bias = -0.0004;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xff8a50, 0.9);
+rim.position.set(-2.5, 1.5, -2.5);
+scene.add(rim);
+
+// ---------- Table and practice pad ----------
+const table = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.08, 3.4),
+  new THREE.MeshStandardMaterial({ color: 0x1b2029, roughness: 0.75, metalness: 0.2 }));
+table.position.set(0, -0.06, -0.45);
+table.receiveShadow = true;
+scene.add(table);
+
+function padTexture() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = Math.round(1024 * ASPECT);
+  const g = c.getContext('2d');
+  const grad = g.createRadialGradient(c.width * .5, c.height * .45, 40, c.width * .5, c.height * .5, c.width * .7);
+  grad.addColorStop(0, '#e9a3a0'); grad.addColorStop(1, '#b8615f');
+  g.fillStyle = grad; g.fillRect(0, 0, c.width, c.height);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 4000; i++) { g.fillStyle = `rgba(255,255,255,${rnd() * .05})`; g.fillRect(rnd() * c.width, rnd() * c.height, 2, 2); }
+  // Soft, branching vessels that drift in one direction (not scribbles)
+  for (let v = 0; v < 14; v++) {
+    let x = rnd() * c.width, y = rnd() * c.height, ang = rnd() * Math.PI * 2;
+    const w0 = 1 + rnd() * 2.2;
+    for (let s = 0; s < 40; s++) {
+      const nx = x + Math.cos(ang) * 14, ny = y + Math.sin(ang) * 14;
+      g.strokeStyle = `rgba(150,45,70,${0.28 * (1 - s / 40)})`; g.lineWidth = w0 * (1 - s / 48);
+      g.beginPath(); g.moveTo(x, y); g.lineTo(nx, ny); g.stroke();
+      x = nx; y = ny; ang += (rnd() - .5) * 0.35;
+    }
+  }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t;
+}
+const tray = new THREE.Mesh(new THREE.BoxGeometry(PAD_W + 0.12, 0.04, PAD_D + 0.12),
+  new THREE.MeshStandardMaterial({ color: 0xc9ced6, metalness: 0.85, roughness: 0.3 }));
+tray.position.y = -0.0; tray.receiveShadow = true; tray.castShadow = true;
+scene.add(tray);
+const pad = new THREE.Mesh(new THREE.BoxGeometry(PAD_W, 0.02, PAD_D),
+  new THREE.MeshPhysicalMaterial({ map: padTexture(), roughness: 0.42, clearcoat: 0.6, clearcoatRoughness: 0.35, sheen: 0.4 }));
+pad.position.y = 0.025; pad.receiveShadow = true;
+scene.add(pad);
+
+// ---------- Robot arm (base yaw + shoulder + elbow + wrist that keeps the instrument vertical) ----------
+const white = new THREE.MeshStandardMaterial({ color: 0xeef1f5, metalness: 0.35, roughness: 0.35 });
+const dark = new THREE.MeshStandardMaterial({ color: 0x2a3140, metalness: 0.6, roughness: 0.4 });
+const steel = new THREE.MeshStandardMaterial({ color: 0xd8dde4, metalness: 1.0, roughness: 0.18 });
+const orange = new THREE.MeshStandardMaterial({ color: 0xff6a2b, metalness: 0.3, roughness: 0.45, emissive: 0x3a1000 });
+const shadowed = m => { m.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return m; };
+
+const L1 = 1.2, L2 = 1.15, L3 = 0.34;        // upper arm, forearm, instrument
+const SHOULDER = new THREE.Vector3(-1.38, 0.72, -0.2);   // base sits left of the pad, so the arm reaches across
+
+const base = new THREE.Group(); base.position.set(SHOULDER.x, 0, SHOULDER.z); scene.add(base);
+base.add(shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.32, 0.12, 48), dark)));
+const turret = new THREE.Group(); base.add(turret);                    // yaws
+const column = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, SHOULDER.y, 40), white);
+column.position.y = SHOULDER.y / 2; turret.add(shadowed(column));
+const band = new THREE.Mesh(new THREE.CylinderGeometry(0.205, 0.205, 0.05, 40), orange); band.position.y = 0.14; turret.add(band);
+
+function joint(radius, width) {
+  const j = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, width, 40), dark);
+  j.rotation.z = Math.PI / 2; return shadowed(j);
+}
+function link(length, r0, r1) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, length, 36), white);
+  body.rotation.x = Math.PI / 2; body.position.z = length / 2; g.add(body);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.012, r0 * 0.9, length * 0.62), orange);
+  stripe.position.set(r0 * 0.93, 0, length / 2); g.add(stripe);
+  const stripe2 = stripe.clone(); stripe2.position.x = -r0 * 0.93; g.add(stripe2);
+  return shadowed(g);
+}
+const shoulder = new THREE.Group(); shoulder.position.y = SHOULDER.y; turret.add(shoulder);
+shoulder.add(joint(0.16, 0.36));
+shoulder.add(link(L1, 0.12, 0.095));
+const elbow = new THREE.Group(); elbow.position.z = L1; shoulder.add(elbow);
+elbow.add(joint(0.12, 0.3));
+elbow.add(link(L2, 0.09, 0.065));
+const wrist = new THREE.Group(); wrist.position.z = L2; elbow.add(wrist);
+wrist.add(joint(0.075, 0.2));
+const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, L3 * 0.78, 24), steel);
+shaft.rotation.x = Math.PI / 2; shaft.position.z = L3 * 0.39; wrist.add(shadowed(shaft));
+const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 24), orange);
+collar.rotation.x = Math.PI / 2; collar.position.z = 0.06; wrist.add(collar);
+const head = new THREE.Group(); head.position.z = L3 * 0.78; wrist.add(head);
+const knuckle = new THREE.Mesh(new THREE.SphereGeometry(0.026, 24, 16), steel); head.add(shadowed(knuckle));
+const jaws = [];
+for (const side of [-1, 1]) {
+  const pivot = new THREE.Group(); head.add(pivot);
+  const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.016, L3 * 0.22), steel);
+  jaw.position.z = L3 * 0.11; pivot.add(shadowed(jaw));
+  pivot.userData.side = side; jaws.push(pivot);
+}
+const tipLight = new THREE.PointLight(0xff6a2b, 0.0, 0.5); head.add(tipLight); tipLight.position.z = L3 * 0.22;
+
+// Solve the joint angles so the instrument tip lands on `tip` (world), instrument pointing straight down.
+function solveIK(tip) {
+  const wristPos = tip.clone(); wristPos.y += L3;
+  const dx = wristPos.x - SHOULDER.x, dz = wristPos.z - SHOULDER.z;
+  turret.rotation.y = Math.atan2(dx, dz);
+  const r = Math.hypot(dx, dz), z = wristPos.y - SHOULDER.y;
+  const c2 = THREE.MathUtils.clamp((r * r + z * z - L1 * L1 - L2 * L2) / (2 * L1 * L2), -1, 1);
+  const q2 = -Math.acos(c2);                                   // elbow bends down: elbow stays up
+  const q1 = Math.atan2(z, r) - Math.atan2(L2 * Math.sin(q2), L1 + L2 * Math.cos(q2));
+  shoulder.rotation.x = -q1;                                   // rotation.x = -elevation
+  elbow.rotation.x = -q2;
+  wrist.rotation.x = Math.PI / 2 + q1 + q2;                    // absolute elevation -90°: straight down
+}
+
+// ---------- Target rings and the path trail ----------
+let rings = [];
+function clearRings() { rings.forEach(r => scene.remove(r.group)); rings = []; }
+function makeRings(targets) {
+  clearRings();
+  targets.forEach((t, i) => {
+    const group = new THREE.Group(); group.position.copy(toWorld(t.x, t.y)); group.position.y = 0.04;
+    const rad = t.r * PAD_W;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.006, 12, 64),
+      new THREE.MeshStandardMaterial({ color: 0x9fffc8, emissive: 0x2bd47a, emissiveIntensity: 0.6 }));
+    ring.rotation.x = Math.PI / 2; group.add(ring);
+    const fill = new THREE.Mesh(new THREE.CircleGeometry(rad, 48),
+      new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.0, depthWrite: false }));
+    fill.rotation.x = -Math.PI / 2; fill.position.y = -0.004; group.add(fill);
+    const label = numberSprite(i + 1); label.position.set(rad + 0.035, 0.02, -rad - 0.01); group.add(label);
+    scene.add(group);
+    rings.push({ id: t.id, group, ring, fill, hit: false, hitAt: 0 });
+  });
+}
+function numberSprite(n) {
+  const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = 'rgba(11,14,19,.75)'; g.beginPath(); g.arc(32, 32, 26, 0, 7); g.fill();
+  g.fillStyle = '#fff'; g.font = 'bold 34px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, 32, 34);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false }));
+  s.scale.set(0.05, 0.05, 1); return s;
+}
+const TRAIL_MAX = 240;
+const trailGeom = new THREE.BufferGeometry();
+trailGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TRAIL_MAX * 3), 3));
+trailGeom.setDrawRange(0, 0);
+const trail = new THREE.Line(trailGeom, new THREE.LineBasicMaterial({ color: 0xffd7b8, transparent: true, opacity: 0.85 }));
+scene.add(trail);
+let trailCount = 0;
+function pushTrail(v) {
+  const a = trailGeom.attributes.position.array;
+  if (trailCount < TRAIL_MAX) trailCount++; else a.copyWithin(0, 3);
+  a.set([v.x, 0.042, v.z], (trailCount - 1) * 3);
+  trailGeom.attributes.position.needsUpdate = true; trailGeom.setDrawRange(0, trailCount);
+}
+function clearTrail() { trailCount = 0; trailGeom.setDrawRange(0, 0); }
+
+// ---------- Lost-hand cues on the pad: the edge it left from glows, an arrow points the way back ----------
+// The pad is the camera frame, so its edges are the camera's edges.
+const PAD_TOP = 0.037, EDGE_T = 0.035;
+function edgeBar(w, d, x, z) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({ color: 0xff6a2b, transparent: true, opacity: 0, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(x, PAD_TOP, z); scene.add(m); return m;
+}
+const padEdges = {
+  top: edgeBar(PAD_W, EDGE_T, 0, -PAD_D / 2 + EDGE_T / 2),
+  bottom: edgeBar(PAD_W, EDGE_T, 0, PAD_D / 2 - EDGE_T / 2),
+  left: edgeBar(EDGE_T, PAD_D, -PAD_W / 2 + EDGE_T / 2, 0),
+  right: edgeBar(EDGE_T, PAD_D, PAD_W / 2 - EDGE_T / 2, 0),
+};
+const arrowShape = new THREE.Shape();
+arrowShape.moveTo(0, 0.022); arrowShape.lineTo(0.1, 0.022); arrowShape.lineTo(0.1, 0.055);
+arrowShape.lineTo(0.17, 0); arrowShape.lineTo(0.1, -0.055); arrowShape.lineTo(0.1, -0.022); arrowShape.lineTo(0, -0.022);
+arrowShape.closePath();
+// Drawn on top of everything (no depth test): the arm often sits right over the way back.
+const arrowMesh = new THREE.Mesh(new THREE.ShapeGeometry(arrowShape),
+  new THREE.MeshBasicMaterial({ color: 0xff6a2b, transparent: true, opacity: 0, depthWrite: false, depthTest: false, side: THREE.DoubleSide }));
+arrowMesh.rotation.x = -Math.PI / 2;               // lie flat; the shape's +x stays world +x
+arrowMesh.renderOrder = 10;
+arrowMesh.scale.setScalar(1.4);
+const arrow = new THREE.Group(); arrow.add(arrowMesh); arrow.position.y = PAD_TOP + 0.003; scene.add(arrow);
+const WHITE_BASE = white.color.clone(), ORANGE_BASE = orange.color.clone(), LOST_GREY = new THREE.Color(0x8a93a3);
+
+function updateLostCues(now, dt, lost) {
+  lostK += ((lost ? 1 : 0) - lostK) * (1 - Math.exp(-dt * 8));
+  white.color.lerpColors(WHITE_BASE, LOST_GREY, lostK);
+  orange.color.lerpColors(ORANGE_BASE, LOST_GREY, lostK);
+  orange.emissiveIntensity = 1 - lostK;
+  const pulse = 0.5 + 0.5 * Math.sin(now / 160);
+  for (const [side, bar] of Object.entries(padEdges)) bar.material.opacity = lostSide === side ? 0.35 + 0.5 * pulse : 0;
+  if (!lost || !lastSeen) { arrowMesh.material.opacity = 0; return; }
+  // From where the hand was last seen, toward the next target (or the middle of the pad).
+  const from = toWorld(THREE.MathUtils.clamp(lastSeen.x, 0.1, 0.9), THREE.MathUtils.clamp(lastSeen.y, 0.1, 0.9));
+  const next = attempt && !attempt.ended ? rings.find(r => !r.hit) : null;
+  const to = next ? next.group.position : new THREE.Vector3(0, 0, 0);
+  const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z);
+  if (dir.lengthSq() < 1e-4) dir.set(0, 0, -1);
+  dir.normalize();
+  arrow.rotation.y = Math.atan2(-dir.z, dir.x);
+  const slide = 0.07 + 0.05 * ((now / 700) % 1);   // starts just ahead of the instrument, then glides
+  arrow.position.x = from.x + dir.x * slide; arrow.position.z = from.z + dir.z * slide;
+  arrowMesh.material.opacity = 0.95 * Math.min(1, lostK * 1.5);
+}
+
+// ---------- State from the backend ----------
+const $ = id => document.getElementById(id);
+const goal = toWorld(0.5, 0.5);           // where the fingertip says the tip should be
+const tipNow = goal.clone();              // smoothed, what we draw
+let handFound = false, lastPointAt = 0;
+let lastSeen = null;                      // last fingertip position seen, camera coords 0..1
+let lostSince = 0;                        // when the hand went missing (0 = tracking)
+let lostSide = undefined;                 // the edge it left from, while lost
+let lostK = 0;                            // 0..1, fades the arm to grey while lost
+let wsDropped = false;
+const LOST_GRACE_MS = 250;                // shorter flickers don't count as lost
+const SIM_TEXT = 'SIMULATED HAND: demo of the 3D scene only, not real tracking';
+let attempt = null;                       // { id, startedAt, hits }
+let grip = 0;                             // 0 open .. 1 closed (closes briefly on each hit)
+
+function setDot(el, cls) { el.className = 'dot' + (cls ? ' ' + cls : ''); }
+function banner(text, cls) { const b = $('banner'); b.textContent = text; b.className = 'panel' + (text ? ' show ' + (cls || '') : ''); }
+function say(text) { $('live').textContent = text; }
+
+function onPoint(m) {
+  lastPointAt = performance.now();
+  $('fpsText').textContent = `${Math.round(m.fps || 0)} fps`;
+  handFound = !!m.ok;
+  setDot($('handDot'), handFound ? 'ok' : 'warn');
+  $('handText').textContent = handFound ? 'Hand: tracking' : 'Hand: not found';
+  $('confText').textContent = handFound ? `conf ${(m.c * 100).toFixed(0)}%` : 'conf -';
+  const tip = $('camTip');
+  if (handFound) {
+    goal.copy(toWorld(m.x, m.y));
+    lastSeen = { x: m.x, y: m.y };
+    lostSince = 0;
+    if (attempt && !attempt.ended) pushTrail(goal);
+    tip.style.display = 'block'; tip.style.left = (m.x * 100) + '%'; tip.style.top = (m.y * 100) + '%';
+  } else {
+    if (!lostSince) lostSince = performance.now();
+    tip.style.display = 'none';
+  }
+}
+
+// Which camera edge the hand most likely left from. The palm sits below the fingertip, so the hand
+// drops out at the bottom while the fingertip is still well above the edge: hence 0.6 for the bottom.
+function exitSide(p) {
+  if (!p) return 'none';
+  const over = [['bottom', (p.y - 0.6) / 0.4], ['top', (0.15 - p.y) / 0.15], ['left', (0.15 - p.x) / 0.15], ['right', (p.x - 0.85) / 0.15]]
+    .filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  return over.length ? over[0][0] : 'middle';
+}
+const LOST_TEXT = {
+  bottom: 'Lost your hand at the bottom of the camera. Raise it a little.',
+  top: 'Lost your hand at the top of the camera. Lower it a little.',
+  left: 'Lost your hand at the left edge. Move it right.',
+  right: 'Lost your hand at the right edge. Move it left.',
+  middle: 'Lost your hand. Hold your index finger up, palm facing the camera.',
+  none: 'Hand not found: hold your index finger up, palm facing the camera.',
+};
+function updateLost(now) {
+  const lost = !!lostSince && now - lostSince > LOST_GRACE_MS && now - lastPointAt < 1000;
+  const side = lost ? exitSide(lastSeen) : null;
+  if (side !== lostSide) {
+    lostSide = side;
+    document.querySelectorAll('.camwrap .edge').forEach(e => e.classList.toggle('on', !!side && e.classList.contains(side)));
+    if (side) { banner((SIM ? 'SIMULATED · ' : '') + LOST_TEXT[side], 'warn'); say(LOST_TEXT[side]); }
+    else banner(SIM ? SIM_TEXT : '', 'sim');
+  }
+  return lost;
+}
+
+function onHit(m) {
+  if (!attempt || m.attemptId !== attempt.id) return;
+  const r = rings.find(r => r.id === m.targetId);
+  if (r && !r.hit) { r.hit = true; r.hitAt = performance.now(); }
+  attempt.hits++; $('hitCount').textContent = attempt.hits;
+  grip = 1; say(`Target ${m.targetId} reached`);
+}
+
+async function onEnded(m) {
+  if (!attempt || m.attemptId !== attempt.id) return;
+  const id = attempt.id; attempt.ended = true;
+  $('startBtn').disabled = false; $('startBtn').textContent = 'Try again';
+  const res = await fetch(`/api/attempts/${id}`); if (!res.ok) return;
+  showAttempt(await res.json());
+}
+
+function onFeedback(m) {
+  const el = document.querySelector(`[data-feedback="${m.attemptId}"]`);
+  if (el) { el.textContent = m.text; el.parentElement.style.display = ''; }
+  document.querySelector(`[data-waiting="${m.attemptId}"]`)?.remove();
+}
+
+function connect() {
+  const ws = new WebSocket((location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/live');
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.type === 'status') { $('camText').textContent = m.msg; setDot($('camDot'), /open/.test(m.msg) ? 'ok' : /could not|error|no frames/.test(m.msg) ? 'bad' : 'warn'); }
+    else if (m.type === 'point') { if (!SIM) onPoint(m); }
+    else if (m.type === 'hit') onHit(m);
+    else if (m.type === 'attemptEnded') onEnded(m);
+    else if (m.type === 'feedback') onFeedback(m);
+  };
+  ws.onopen = () => { setDot($('camDot'), 'warn'); if (wsDropped) { wsDropped = false; restartPreview(); } };
+  ws.onclose = () => { wsDropped = true; $('camText').textContent = 'Backend offline, retrying'; setDot($('camDot'), 'bad'); setTimeout(connect, 1000); };
+}
+
+async function refreshStatus() {
+  try {
+    const s = await (await fetch('/api/status')).json();
+    setDot($('gemDot'), s.gemini === 'online' ? 'ok' : 'warn');
+    $('gemText').textContent = s.gemini === 'online' ? 'Gemini online' : 'Gemini offline';
+  } catch { /* the socket chip already shows the backend is down */ }
+}
+
+// ---------- Results panel ----------
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function gaugeSVG(frac, color) {
+  const R = 40, C = Math.PI * R * 1.5;        // 270° arc
+  const f = Math.max(0, Math.min(1, frac));
+  return `<svg viewBox="0 0 100 92" aria-hidden="true">
+    <circle cx="50" cy="50" r="${R}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${C} 999" transform="rotate(135 50 50)"/>
+    <circle cx="50" cy="50" r="${R}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+      stroke-dasharray="${C * f} 999" transform="rotate(135 50 50)"/>
+  </svg>`;
+}
+function gauge(name, metric, frac, color, display) {
+  const v = metric?.value;
+  return `<div class="gauge"><div style="position:relative">${gaugeSVG(v == null ? 0 : frac, color)}
+    <div style="position:absolute;inset:0;display:grid;place-items:center;padding-top:6px">
+      <div style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums">${v == null ? '-' : esc(display)}</div></div></div>
+    <div class="name">${esc(name)}</div><div class="formula">${esc(metric?.formula || '')}</div></div>`;
+}
+const scoreColor = v => v >= 85 ? '#3ddc84' : v >= 60 ? '#ffb020' : '#ff4d5e';
+function showAttempt(a) {
+  const m = a.metrics || {};
+  const acc = m.accuracy?.value, sm = m.smoothness?.value, sp = m.speed?.value, cov = m.coverage?.value;
+  let html = `<div class="sub">Attempt ${esc(a.attemptId)} · ${esc(a.state)} · ${a.hits.length}/5 targets · ${a.points.length} frames</div>`;
+  if (a.scored) {
+    html += `<div class="gauges">
+      ${gauge('Accuracy', m.accuracy, acc / 100, scoreColor(acc), Math.round(acc))}
+      ${gauge('Smoothness', m.smoothness, sm / 100, scoreColor(sm), Math.round(sm))}
+      ${gauge('Speed', m.speed, sp == null ? 0 : Math.max(0, 1 - (sp - 0.5) / 3), '#7cb8ff', sp?.toFixed(1) + 's')}
+      ${gauge('Tracked', m.coverage, cov / 100, scoreColor(cov), Math.round(cov) + '%')}
+    </div>`;
+  } else {
+    html += `<div class="msg bad"><div class="who">Not scored</div>${esc(a.refusedReason)}</div>`;
+  }
+  if (a.refusals?.length) {
+    html += `<div class="msg"><div class="who">Stretches left out of the score</div><ul class="reasons">${a.refusals.slice(0, 6).map(r =>
+      `<li>${(r.fromT / 1000).toFixed(1)} to ${(r.toT / 1000).toFixed(1)} s: ${esc(r.reason)}</li>`).join('')}</ul></div>`;
+  }
+  html += `<div class="msg" style="${a.feedback ? '' : 'display:none'}"><div class="who">Coach</div><div data-feedback="${esc(a.attemptId)}">${esc(a.feedback || '')}</div></div>`;
+  if (!a.feedback) html += `<div class="msg" data-waiting="${esc(a.attemptId)}"><div class="who">Coach</div>Reading your numbers…</div>`;
+  $('resultsTitle').textContent = a.scored ? 'Your attempt' : 'Attempt not scored';
+  $('resultsBody').innerHTML = html;
+  $('results').classList.add('open');
+  say(a.scored ? `Accuracy ${Math.round(acc)}, smoothness ${Math.round(sm)}, ${sp?.toFixed(1)} seconds per target` : `Not scored: ${a.refusedReason}`);
+  if (!a.feedback) pollFeedback(a.attemptId);
+}
+async function pollFeedback(id) {
+  for (let i = 0; i < 40; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    const a = await (await fetch(`/api/attempts/${id}`)).json();
+    if (a.feedback) {
+      const el = document.querySelector(`[data-feedback="${id}"]`);
+      if (el) { el.textContent = a.feedback; el.parentElement.style.display = ''; }
+      document.querySelector(`[data-waiting="${id}"]`)?.remove();
+      return;
+    }
+  }
+}
+
+// ---------- Buttons ----------
+$('startBtn').onclick = async () => {
+  $('results').classList.remove('open');
+  const r = await (await fetch('/api/attempts/start', { method: 'POST' })).json();
+  attempt = { id: r.attemptId, startedAt: performance.now(), hits: 0 };
+  makeRings(r.targets); clearTrail();
+  $('hitCount').textContent = '0';
+  $('startBtn').disabled = true; $('startBtn').textContent = 'Drill running';
+  say('Drill started. Trace the rings in order, 1 to 5.');
+};
+$('checkBtn').onclick = async () => {
+  const btn = $('checkBtn'); btn.disabled = true; btn.textContent = 'Hold still… 3 s';
+  const reading = setTimeout(() => { btn.textContent = 'Reading the frame…'; }, 3200);
+  try {
+    const c = await (await fetch('/api/check?seconds=3', { method: 'POST' })).json();
+    $('resultsTitle').textContent = c.pass ? 'Setup check passed' : 'Setup check failed';
+    $('resultsBody').innerHTML = `
+      <div class="sub">${c.frames} frames · ${c.fps} fps · hand found ${c.coveragePercent}% · jitter ${c.jitterPx ?? '-'} px</div>
+      ${c.reasons.length ? `<div class="msg bad"><div class="who">Measured</div><ul class="reasons">${c.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>` : `<div class="msg good"><div class="who">Measured</div>Every check is inside its limit.</div>`}
+      <div class="msg"><div class="who">${c.geminiSawFrame ? 'Gemini (saw one frame)' : 'Advice'}</div>${esc(c.advice)}</div>`;
+    $('results').classList.add('open');
+    say(c.pass ? 'Setup check passed' : 'Setup check failed: ' + c.reasons.join(', '));
+  } finally { clearTimeout(reading); btn.disabled = false; btn.textContent = 'Setup check'; }
+};
+$('closeResults').onclick = () => $('results').classList.remove('open');
+
+// ---------- Simulated hand (?sim) for testing the scene without a camera; always labelled ----------
+if (SIM) {
+  banner(SIM_TEXT, 'sim');
+  setInterval(() => {
+    const t = performance.now() / 1000, cyc = t % 12;
+    if (cyc > 9.5) { onPoint({ ok: false, fps: 30 }); return; }           // a simulated exit at the bottom, every 12 s
+    const x = 0.5 + 0.3 * Math.sin(t * 0.7);
+    let y = 0.45 + 0.2 * Math.sin(t * 1.1);
+    if (cyc > 8) y += (0.8 - y) * (cyc - 8) / 1.5;                       // drifts down before it leaves
+    onPoint({ ok: true, x, y, c: 0.97, fps: 30 });
+  }, 33);
+}
+
+// ---------- Render loop ----------
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  tipNow.lerp(goal, 1 - Math.exp(-dt * 18));                 // smooth, but still close to the raw point
+  solveIK(tipNow);
+  grip = Math.max(0, grip - dt * 3);
+  jaws.forEach(j => { j.rotation.y = j.userData.side * (0.32 - 0.28 * grip); });
+  tipLight.intensity = handFound ? 0.6 + grip * 2 : 0;
+  const stale = performance.now() - lastPointAt > 1000;
+  if (stale && !SIM) { setDot($('handDot'), ''); $('handText').textContent = 'Hand: no data'; }
+
+  const now = performance.now();
+  updateLostCues(now, dt, lostNow);
+  const nextIdx = attempt && !attempt.ended ? rings.findIndex(r => !r.hit) : -1;
+  rings.forEach((r, i) => {
+    if (r.hit) {
+      const k = Math.min(1, (now - r.hitAt) / 400);
+      r.fill.material.opacity = 0.55 * k; r.ring.material.emissiveIntensity = 1.4;
+      r.ring.scale.setScalar(1 + 0.25 * Math.sin(k * Math.PI));
+    } else if (i === nextIdx) {
+      const p = 0.5 + 0.5 * Math.sin(now / 180);
+      r.ring.material.emissiveIntensity = 0.6 + p; r.ring.scale.setScalar(1 + 0.06 * p);
+    } else { r.ring.material.emissiveIntensity = 0.25; r.ring.scale.setScalar(1); }
+  });
+  if (attempt && !attempt.ended) $('timer').textContent = ((now - attempt.startedAt) / 1000).toFixed(1);
+
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+connect(); refreshStatus(); setInterval(refreshStatus, 5000);
+// ---------- Camera preview: the real camera, mirrored, streamed from Java on this laptop ----------
+function restartPreview() {
+  const img = $('camImg');
+  if (img) img.src = '/api/camera.mjpg?t=' + Date.now();
+}
+function startPreview() {
+  const wrap = $('camWrap'), img = $('camImg');
+  if (SIM) {   // the simulated hand gets a labelled placeholder, never the real camera
+    wrap.classList.add('sim'); img.remove();
+    wrap.insertAdjacentHTML('afterbegin', '<span class="simlabel">SIMULATED</span>');
+    return;
+  }
+  img.onerror = () => { wrap.classList.add('nocam'); setTimeout(restartPreview, 3000); };
+  img.onload = () => wrap.classList.remove('nocam');
+  restartPreview();
+}
+startPreview();
+
+// The lost check runs on its own timer, so the banner and the screen-reader message work even when
+// the 3D view isn't drawing (a hidden tab). The render loop only reads the result for the 3D cues.
+let lostNow = false;
+setInterval(() => { lostNow = updateLost(performance.now()); }, 100);
+
+// Show the course before the first drill, so the scene is never empty. Java owns the course.
+fetch('/api/course').then(r => r.json()).then(makeRings).catch(() => {});
+</script>
+</body>
+</html>
