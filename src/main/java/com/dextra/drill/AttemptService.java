@@ -30,6 +30,8 @@ public class AttemptService implements TrackPointListener {
 
     private final LiveSocket socket;
     private final GeminiCoach coach;
+    private final AttemptLog history;
+    private final FingerLock fingers;
     /** One thread, so coaching calls never hold up the tracker loop. */
     private final ExecutorService coachThread = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "dextra-coach");
@@ -39,9 +41,11 @@ public class AttemptService implements TrackPointListener {
     private final Map<String, Attempt> attempts = new LinkedHashMap<>();
     private Attempt running;
 
-    public AttemptService(LiveSocket socket, GeminiCoach coach) {
+    public AttemptService(LiveSocket socket, GeminiCoach coach, AttemptLog history, FingerLock fingers) {
         this.socket = socket;
         this.coach = coach;
+        this.history = history;
+        this.fingers = fingers;
     }
 
     /**
@@ -63,6 +67,8 @@ public class AttemptService implements TrackPointListener {
         final String id;
         final Instant startedAt;
         final List<Target> targets;
+        final String person;
+        final List<String> fingers;
         final List<Point> points = new ArrayList<>();
         final List<Hit> hits = new ArrayList<>();
         long t0 = -1;
@@ -70,18 +76,27 @@ public class AttemptService implements TrackPointListener {
         ScoreReport report;
         String feedback;
 
-        Attempt(String id, Instant startedAt, List<Target> targets) {
+        Attempt(String id, Instant startedAt, List<Target> targets, String person, List<String> fingers) {
             this.id = id;
             this.startedAt = startedAt;
             this.targets = targets;
+            this.person = person;
+            this.fingers = fingers;
         }
     }
 
-    public synchronized StartResponse start() {
+    public StartResponse start() {
+        return start(null);
+    }
+
+    /** Starts a drill for this person (blank means "Guest"), with the two fingers locked right now. */
+    @SuppressWarnings("unchecked")
+    public synchronized StartResponse start(String person) {
         if (running != null) {
             finish(running, "replaced");
         }
-        Attempt a = new Attempt(UUID.randomUUID().toString().substring(0, 8), Instant.now(), course());
+        Attempt a = new Attempt(UUID.randomUUID().toString().substring(0, 8), Instant.now(), course(),
+                cleanName(person), (List<String>) fingers.view().get("fingers"));
         attempts.put(a.id, a);
         running = a;
         return new StartResponse(a.id, a.targets);
@@ -121,6 +136,9 @@ public class AttemptService implements TrackPointListener {
         if (running == a) {
             running = null;
         }
+        if (!"replaced".equals(state)) {             // an abandoned attempt isn't evidence either way
+            history.append(record(a));
+        }
         socket.broadcast("{\"type\":\"attemptEnded\",\"attemptId\":\"" + a.id + "\",\"state\":\"" + state + "\"}");
         ScoreReport report = a.report;
         String id = a.id;
@@ -129,6 +147,27 @@ public class AttemptService implements TrackPointListener {
             setFeedback(id, text);
             socket.broadcast(feedbackJson(id, text));
         });
+    }
+
+    /** Trimmed, single-spaced, at most 40 characters; blank becomes "Guest". */
+    static String cleanName(String person) {
+        String p = person == null ? "" : person.trim().replaceAll("\\s+", " ");
+        if (p.length() > 40) {
+            p = p.substring(0, 40).trim();
+        }
+        return p.isEmpty() ? "Guest" : p;
+    }
+
+    private static AttemptRecord record(Attempt a) {
+        ScoreReport r = a.report;
+        return new AttemptRecord(a.id, a.person, a.startedAt.toString(), a.state, r.scored(), r.refusedReason(),
+                value(r, "accuracy"), value(r, "smoothness"), value(r, "speed"), value(r, "coverage"),
+                a.hits.size(), r.refusals().size(), a.fingers);
+    }
+
+    private static Double value(ScoreReport r, String key) {
+        DrillTypes.Metric m = r.metrics().get(key);
+        return m == null ? null : m.value();
     }
 
     static String feedbackJson(String attemptId, String text) {

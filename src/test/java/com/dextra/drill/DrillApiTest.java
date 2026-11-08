@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The REST contract the frontend codes against, on the real app with the camera off. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key="})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key=", "dextra.data.dir="})
 class DrillApiTest {
 
     @LocalServerPort
@@ -64,6 +64,32 @@ class DrillApiTest {
         String list = call("GET", "/api/attempts").body();
         assertTrue(list.startsWith("[{\"attemptId\":\"" + id + "\""), list);
         assertEquals(404, call("GET", "/api/attempts/nope").statusCode());
+    }
+
+    private HttpResponse<String> postJson(String path, String json) throws Exception {
+        return http.send(HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json)).build(),
+                HttpResponse.BodyHandlers.ofString());
+    }
+
+    @Test
+    void progressReviewThroughTheApi() throws Exception {
+        String person = "Test Person " + System.nanoTime();
+        assertEquals(200, postJson("/api/attempts/start", "{\"person\":\"" + person + "\"}").statusCode());
+        for (TrackPoint p : new SyntheticPaths().build(AttemptService.course())) {
+            attempts.onPoint(p);
+        }
+
+        HttpResponse<String> progress = postJson("/api/progress", "{\"person\":\"" + person.toLowerCase() + "\"}");
+        assertEquals(200, progress.statusCode());
+        String body = progress.body();
+        assertTrue(body.contains("\"attempts\":1"), body);
+        assertTrue(body.contains("\"scored\":1"), body);
+        assertTrue(body.contains("\"refused\":0"), body);
+        assertTrue(body.contains("\"key\":\"accuracy\""), body);
+        assertTrue(body.contains("\"fingers\":[\""), body);
+        assertTrue(call("GET", "/api/people").body().contains(person), "people list");
     }
 
     @Test

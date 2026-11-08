@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ScoringTest {
 
     private static AttemptView run(SyntheticPaths paths) {
-        AttemptService service = new AttemptService(new LiveSocket(), new GeminiCoach("", "gemini-2.5-flash", "gemini-flash-latest"));
+        AttemptService service = new AttemptService(new LiveSocket(), new GeminiCoach("", "gemini-2.5-flash", "gemini-flash-latest"), AttemptLog.memoryOnly(), new FingerLock());
         String id = service.start().attemptId();
         for (TrackPoint p : paths.build(AttemptService.course())) {
             service.onPoint(p);
@@ -122,7 +122,7 @@ class ScoringTest {
 
     @Test
     void unfinishedAndTimedOutAttempts() {
-        AttemptService service = new AttemptService(new LiveSocket(), new GeminiCoach("", "gemini-2.5-flash", "gemini-flash-latest"));
+        AttemptService service = new AttemptService(new LiveSocket(), new GeminiCoach("", "gemini-2.5-flash", "gemini-flash-latest"), AttemptLog.memoryOnly(), new FingerLock());
         String id = service.start().attemptId();
         service.onPoint(new TrackPoint(0, true, 0.5, 0.5, 0.9, 30));
         assertEquals("running", service.get(id).orElseThrow().state());

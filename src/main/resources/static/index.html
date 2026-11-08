@@ -74,6 +74,7 @@
   .camwrap .simlabel { position: absolute; left: 8px; top: 6px; font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
   .camwrap .off { position: absolute; inset: 0; display: none; place-items: center; color: var(--muted); font-size: 12px; text-align: center; padding: 10px; }
   .camwrap.nocam .off { display: grid; }
+  .camwrap.nocam img { display: none; }
   .tipdot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent);
     box-shadow: 0 0 0 2px #fff, 0 0 10px var(--accent); display: none; }
   .edge { position: absolute; background: var(--accent); opacity: 0; box-shadow: 0 0 12px var(--accent); }
@@ -101,6 +102,36 @@
   #fingers .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
   .fdot { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #7cb8ff; color: #0b0e13;
     font: 700 10px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff; display: none; }
+  header .who { display: flex; align-items: center; gap: 6px; margin-top: 10px; }
+  header .who label { font-size: 11px; color: var(--muted); }
+  header .who input { width: 112px; font: inherit; font-size: 12px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,0.05); color: var(--text); }
+  header .who input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  header .who button { padding: 6px 10px; font-size: 12px; }
+  #clinic { top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+    overflow: auto; padding: 20px; display: none; z-index: 6; background: rgba(14, 18, 25, 0.96); }
+  #clinic.open { display: block; }
+  .clinic-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .clinic-head h2 { margin: 0; font-size: 18px; }
+  .clinic-head .sub, #clinicCounts, #clinicEmpty { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
+  .clinic-who { display: flex; align-items: center; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+  .clinic-who label { font-size: 12px; color: var(--muted); }
+  .clinic-who select { font: inherit; color: var(--text); background: #151a23; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+  .tile { position: relative; background: rgba(255,255,255,0.04); border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .tile .label { font-size: 12px; color: var(--muted); }
+  .tile .value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 2px 0; }
+  .tile .delta { font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .delta.better { color: #0ca30c; } .delta.worse { color: #d03b3b; } .delta.same { color: var(--muted); font-weight: 500; }
+  .tile svg { display: block; width: 100%; height: auto; margin-top: 10px; overflow: visible; }
+  .tip { position: absolute; pointer-events: none; background: #0b0e13; border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px;
+    font-size: 12px; white-space: nowrap; display: none; z-index: 2; color: var(--muted); }
+  .tip strong { display: block; font-size: 14px; color: var(--text); font-variant-numeric: tabular-nums; }
+  .tablewrap { margin-top: 14px; overflow-x: auto; }
+  #clinicTable { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  #clinicTable th, #clinicTable td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  #clinicTable th { color: var(--muted); font-weight: 600; }
+  #clinicTable td.refused { color: var(--muted); white-space: normal; min-width: 220px; }
   @media (prefers-reduced-motion: reduce) { #results { transition: none; } }
 </style>
 </head>
@@ -110,7 +141,21 @@
 <header class="panel">
   <h1>DEX<span>TRA</span></h1>
   <p>Control with precision. Improve with evidence.</p>
+  <div class="who"><label for="who">Practising as</label><input id="who" maxlength="40" placeholder="Your name" autocomplete="off"><button id="clinicBtn" aria-haspopup="dialog">Clinic mode</button></div>
 </header>
+
+<aside id="clinic" class="panel" role="dialog" aria-modal="false" aria-labelledby="clinicTitle">
+  <div class="clinic-head">
+    <div><h2 id="clinicTitle">Progress review</h2><p class="sub">One person's practice over time, saved on this laptop. Practice evidence, not a diagnosis.</p></div>
+    <button id="clinicClose">Close</button>
+  </div>
+  <div class="clinic-who"><label for="clinicWho">Person</label><select id="clinicWho"></select><span id="clinicCounts"></span></div>
+  <div id="clinicTiles" class="tiles"></div>
+  <p id="clinicEmpty"></p>
+  <div class="tablewrap"><table id="clinicTable"><caption class="sr">Every attempt, newest first</caption>
+    <thead><tr><th>When</th><th>Result</th><th>Accuracy</th><th>Smoothness</th><th>Speed</th><th>Tracked</th><th>Fingers</th></tr></thead>
+    <tbody id="clinicRows"></tbody></table></div>
+</aside>
 
 <div id="chips" class="panel" aria-label="Live tracking status">
   <span class="chip"><span id="camDot" class="dot"></span><span id="camText">Connecting</span></span>
@@ -522,6 +567,7 @@ async function onEnded(m) {
   $('startBtn').disabled = false; $('startBtn').textContent = 'Try again';
   const res = await fetch(`/api/attempts/${id}`); if (!res.ok) return;
   showAttempt(await res.json());
+  if ($('clinic').classList.contains('open')) loadProgress($('clinicWho').value);
 }
 
 function onFeedback(m) {
@@ -617,7 +663,8 @@ async function pollFeedback(id) {
 // ---------- Buttons ----------
 $('startBtn').onclick = async () => {
   $('results').classList.remove('open');
-  const r = await (await fetch('/api/attempts/start', { method: 'POST' })).json();
+  const r = await (await fetch('/api/attempts/start', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ person: who() }) })).json();
   attempt = { id: r.attemptId, startedAt: performance.now(), hits: 0 };
   makeRings(r.targets); clearTrail();
   $('hitCount').textContent = '0';
@@ -745,7 +792,11 @@ function closeFingers() {
 }
 $('fingersBtn').onclick = openFingers;
 $('fingersDone').onclick = closeFingers;
-addEventListener('keydown', e => { if (e.key === 'Escape' && $('fingers').classList.contains('open')) closeFingers(); });
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if ($('clinic').classList.contains('open')) closeClinic();
+  else if ($('fingers').classList.contains('open')) closeFingers();
+});
 function onPinch(m) {
   $('pinchStatus').textContent = `Pinch ${m.count} of ${m.of}: ${cap(m.fingers[0])} + ${cap(m.fingers[1])}`;
   document.querySelectorAll('.finger').forEach(b => b.classList.toggle('candidate', m.fingers.includes(b.dataset.f)));
@@ -755,6 +806,118 @@ function onFingersLocked(m) {
   if ($('fingers').classList.contains('open')) lockedMessage(m);
 }
 fetch('/api/fingers').then(r => r.json()).then(showLock).catch(() => {});
+
+// ---------- Clinic mode: one person's progress over time, saved on this laptop by Java ----------
+const WHO_KEY = 'dextra.who';
+function who() { return ($('who').value || '').trim() || 'Guest'; }
+try { $('who').value = localStorage.getItem(WHO_KEY) || ''; } catch { /* storage blocked: start blank */ }
+$('who').addEventListener('change', () => { try { localStorage.setItem(WHO_KEY, $('who').value.trim()); } catch { /* fine */ } });
+
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs) => { const e = document.createElementNS(SVGNS, tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); return e; };
+const UNIT = { accuracy: '', smoothness: '', speed: 's', coverage: '%' };
+const LABEL_NOTE = { accuracy: 'score out of 100', smoothness: 'score out of 100', speed: 'seconds per target, lower is better', coverage: 'share of frames tracked' };
+const fmtv = (v, key) => v == null ? '-' : (key === 'speed' ? v.toFixed(1) : String(Math.round(v)));
+const when = iso => { const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }); };
+
+function tile(m, history) {
+  const div = document.createElement('div'); div.className = 'tile';
+  const label = document.createElement('div'); label.className = 'label'; label.textContent = `${m.label} · ${LABEL_NOTE[m.key]}`;
+  const value = document.createElement('div'); value.className = 'value';
+  value.textContent = m.latest == null ? '-' : fmtv(m.latest, m.key) + UNIT[m.key];
+  const delta = document.createElement('div');
+  if (m.change == null) {
+    delta.className = 'delta same';
+    delta.textContent = m.values.length ? 'One scored attempt so far' : 'No scored attempts yet';
+  } else {
+    const verdict = m.improved === true ? 'better' : m.improved === false ? 'worse' : 'no change';
+    delta.className = 'delta ' + (m.improved === true ? 'better' : m.improved === false ? 'worse' : 'same');
+    const arrow = m.change > 0 ? '▲' : m.change < 0 ? '▼' : '■';
+    delta.textContent = `${arrow} ${m.change > 0 ? '+' : ''}${fmtv(m.change, m.key)}${UNIT[m.key]} since the first attempt · ${verdict}`;
+  }
+  div.append(label, value, delta);
+  const scoredRows = history.filter(r => r.scored && r[m.key] != null);
+  if (m.values.length) div.append(sparkline(m, scoredRows, div));
+  return div;
+}
+
+// One series: the line in the quiet colour, the latest attempt in the accent; hover snaps to the nearest attempt.
+function sparkline(m, rows, host) {
+  const W = 200, H = 48, P = 6, vals = m.values;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img',
+    'aria-label': `${m.label} over ${vals.length} scored attempts, oldest first: ${vals.map(v => fmtv(v, m.key) + UNIT[m.key]).join(', ')}` });
+  const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const x = i => vals.length === 1 ? W / 2 : P + i * (W - 2 * P) / (vals.length - 1);
+  const y = v => hi === lo ? H / 2 : H - P - (v - lo) / span * (H - 2 * P);
+  svg.append(svgEl('line', { x1: 0, x2: W, y1: H - 0.5, y2: H - 0.5, stroke: 'rgba(255,255,255,.08)', 'stroke-width': 1 }));
+  if (vals.length > 1) svg.append(svgEl('polyline', { points: vals.map((v, i) => `${x(i)},${y(v)}`).join(' '), fill: 'none',
+    stroke: '#8b95a5', 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  vals.forEach((v, i) => {
+    const last = i === vals.length - 1;
+    svg.append(svgEl('circle', { cx: x(i), cy: y(v), r: last ? 5 : 4, fill: last ? '#ff6a2b' : '#8b95a5', stroke: '#151a23', 'stroke-width': 2 }));
+  });
+  const hair = svgEl('line', { y1: 0, y2: H, stroke: 'rgba(255,255,255,.35)', 'stroke-width': 1, visibility: 'hidden' });
+  const hit = svgEl('rect', { x: -8, y: -8, width: W + 16, height: H + 16, fill: 'transparent' });
+  svg.append(hair, hit);
+  const tip = document.createElement('div'); tip.className = 'tip';
+  const strong = document.createElement('strong'); const sub = document.createElement('span');
+  tip.append(strong, sub); host.append(tip);
+  hit.addEventListener('pointermove', e => {
+    const box = svg.getBoundingClientRect(), px = (e.clientX - box.left) / box.width * W;
+    let i = 0;
+    vals.forEach((_, k) => { if (Math.abs(x(k) - px) < Math.abs(x(i) - px)) i = k; });
+    hair.setAttribute('x1', x(i)); hair.setAttribute('x2', x(i)); hair.setAttribute('visibility', 'visible');
+    strong.textContent = fmtv(vals[i], m.key) + UNIT[m.key];
+    sub.textContent = `Scored attempt ${i + 1} of ${vals.length}${rows[i] ? ' · ' + when(rows[i].startedAt) : ''}`;
+    tip.style.display = 'block';
+    const hb = host.getBoundingClientRect();
+    const left = box.left - hb.left + x(i) / W * box.width - tip.offsetWidth / 2;
+    tip.style.left = Math.max(4, Math.min(hb.width - tip.offsetWidth - 4, left)) + 'px';
+    tip.style.top = (box.top - hb.top - tip.offsetHeight - 6) + 'px';
+  });
+  hit.addEventListener('pointerleave', () => { hair.setAttribute('visibility', 'hidden'); tip.style.display = 'none'; });
+  return svg;
+}
+
+function renderTable(history) {
+  const rows = [...history].reverse().map(r => {
+    const tr = document.createElement('tr');
+    const cells = [when(r.startedAt), r.scored ? 'Scored' : `Not scored: ${r.refusedReason || r.state}`,
+      fmtv(r.accuracy, 'accuracy'), fmtv(r.smoothness, 'smoothness'),
+      r.speed == null ? '-' : fmtv(r.speed, 'speed') + 's', r.coverage == null ? '-' : fmtv(r.coverage, 'coverage') + '%',
+      (r.fingers || []).map(cap).join(' + ')];
+    cells.forEach((c, i) => { const td = document.createElement('td'); td.textContent = c; if (i === 1 && !r.scored) td.className = 'refused'; tr.append(td); });
+    return tr;
+  });
+  $('clinicRows').replaceChildren(...rows);
+}
+
+async function loadProgress(person) {
+  const v = await (await fetch('/api/progress', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ person }) })).json();
+  $('clinicCounts').textContent = `${v.attempts} attempt${v.attempts === 1 ? '' : 's'} · ${v.scored} scored · ${v.refused} not scored`;
+  $('clinicTiles').replaceChildren(...v.metrics.map(m => tile(m, v.history)));
+  renderTable(v.history);
+  $('clinicEmpty').textContent = v.attempts ? '' : `No attempts saved for ${v.person} yet. Do a drill and it shows up here.`;
+  $('clinicTable').style.display = v.attempts ? '' : 'none';
+}
+
+async function openClinic() {
+  $('clinic').classList.add('open');
+  const people = await (await fetch('/api/people')).json();
+  const names = people.map(p => p.person);
+  const current = who();
+  if (!names.some(n => n.toLowerCase() === current.toLowerCase())) names.unshift(current);
+  const sel = $('clinicWho');
+  sel.replaceChildren(...names.map(n => { const o = document.createElement('option'); o.value = n; o.textContent = n; return o; }));
+  sel.value = names.find(n => n.toLowerCase() === current.toLowerCase());
+  await loadProgress(sel.value);
+  sel.focus();
+}
+function closeClinic() { $('clinic').classList.remove('open'); $('clinicBtn').focus(); }
+$('clinicWho').onchange = e => loadProgress(e.target.value);
+$('clinicBtn').onclick = openClinic;
+$('clinicClose').onclick = closeClinic;
 
 // ---------- Camera preview: the real camera, mirrored, streamed from Java on this laptop ----------
 function restartPreview() {
