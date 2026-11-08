@@ -2,7 +2,7 @@
 
 **Control with precision. Improve with evidence.**
 
-DEXTRA turns a laptop webcam into a hand precision trainer. You move two fingers, a 3D robotic instrument copies them, and DEXTRA measures how precisely you moved, with numbers it can explain. When tracking isn't good enough to trust, it refuses to score and tells you why.
+DEXTRA turns a laptop webcam into a hand precision trainer. You move two fingers, a 3D robotic instrument copies them, and DEXTRA measures how precisely you moved, with numbers it can explain. when tracking isn't good enough to trust, it refuses to score and tells you why.
 
 Built at HackTrent 2026 by Trinidad Laguardia and Sidharth Nair.
 
