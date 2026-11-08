@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The REST contract the frontend codes against, on the real app with the camera off. */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key=", "dextra.data.dir="})
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key=", "dextra.data.dir=", "dextra.tiger.url="})
 class DrillApiTest {
 
     @LocalServerPort

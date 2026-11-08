@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** The finger picker's API on the real app (camera off), plus the lock and the fingertip JSON it relies on. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key=", "dextra.data.dir="})
+        properties = {"dextra.camera.enabled=false", "dextra.gemini.api-key=", "dextra.data.dir=", "dextra.tiger.url="})
 class FingersApiTest {
 
     @LocalServerPort

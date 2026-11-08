@@ -19,17 +19,21 @@ public final class Progress {
     }
 
     public record View(String person, int attempts, int scored, int refused, List<MetricTrend> metrics,
-                       List<AttemptRecord> history) {
+                       List<AttemptRecord> history, List<AttemptLog.Day> daily, String storage) {
     }
 
     public static View of(String person, List<AttemptRecord> history) {
+        return of(person, history, List.of(), null);
+    }
+
+    public static View of(String person, List<AttemptRecord> history, List<AttemptLog.Day> daily, String storage) {
         int scored = (int) history.stream().filter(AttemptRecord::scored).count();
         List<MetricTrend> metrics = List.of(
                 trend("accuracy", "Accuracy", "score", true, history, AttemptRecord::accuracy),
                 trend("smoothness", "Smoothness", "score", true, history, AttemptRecord::smoothness),
                 trend("speed", "Speed", "s per target", false, history, AttemptRecord::speed),
                 trend("coverage", "Tracked", "% of frames", true, history, AttemptRecord::coverage));
-        return new View(person, history.size(), scored, history.size() - scored, metrics, history);
+        return new View(person, history.size(), scored, history.size() - scored, metrics, history, daily, storage);
     }
 
     private static MetricTrend trend(String key, String label, String unit, boolean higherIsBetter,

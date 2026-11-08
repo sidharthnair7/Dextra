@@ -107,7 +107,7 @@ export default function Clinic() {
       <main className="mx-auto max-w-6xl px-5 pb-24 pt-32 text-ink sm:px-8">
         <Reveal>
           <h1 className="font-display text-4xl font-[780] leading-none sm:text-6xl">Clinic mode</h1>
-          <p className="mt-4 max-w-2xl text-lg text-steel">One person's practice over time, saved on this laptop. Practice evidence, not a diagnosis.</p>
+          <p className="mt-4 max-w-2xl text-lg text-steel">One person's practice over time. Practice evidence, not a diagnosis.</p>
         </Reveal>
 
         {error ? (
@@ -121,6 +121,7 @@ export default function Clinic() {
                 {names.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
               {view && <span className="text-sm text-steel">{view.attempts} attempt{view.attempts === 1 ? '' : 's'} · {view.scored} scored · {view.refused} not scored</span>}
+              {view?.storage && <span className="ml-auto rounded-full bg-white px-3 py-1 text-xs font-semibold text-steel ring-1 ring-ink/10">Saved in {view.storage}</span>}
             </div>
 
             {view && view.attempts === 0 && (
@@ -132,6 +133,30 @@ export default function Clinic() {
                 <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {view.metrics.map(m => <Tile key={m.key} m={m} history={view.history} />)}
                 </div>
+                {view.daily.length > 0 && (
+                  <div className="mt-8 rounded-3xl bg-white p-5 ring-1 ring-ink/10">
+                    <h2 className="text-sm font-semibold">By day <span className="font-normal text-steel">· averages of scored attempts{view.storage === 'Tiger Cloud' ? ', grouped with Timescale time_bucket' : ''}</span></h2>
+                    <div className="mt-3 overflow-x-auto">
+                      <table className="w-full text-left text-sm tabular-nums">
+                        <caption className="sr-only">Practice per day</caption>
+                        <thead className="text-steel"><tr>{['Day', 'Attempts', 'Scored', 'Accuracy', 'Smoothness', 'Speed', 'Tracked'].map(h => <th key={h} className="px-3 py-2 font-semibold">{h}</th>)}</tr></thead>
+                        <tbody>
+                          {[...view.daily].reverse().map(d => (
+                            <tr key={d.day} className="border-t border-ink/10">
+                              <td className="px-3 py-2 whitespace-nowrap">{new Date(d.day + 'T12:00:00Z').toLocaleDateString([], { month: 'short', day: 'numeric' })}</td>
+                              <td className="px-3 py-2">{d.attempts}</td>
+                              <td className="px-3 py-2">{d.scored}</td>
+                              <td className="px-3 py-2">{fmt(d.accuracy, 'accuracy')}</td>
+                              <td className="px-3 py-2">{fmt(d.smoothness, 'smoothness')}</td>
+                              <td className="px-3 py-2">{d.speed == null ? '-' : fmt(d.speed, 'speed') + 's'}</td>
+                              <td className="px-3 py-2">{d.coverage == null ? '-' : fmt(d.coverage, 'coverage') + '%'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-8 overflow-x-auto rounded-3xl bg-white ring-1 ring-ink/10">
                   <table className="w-full text-left text-sm tabular-nums">
                     <caption className="sr-only">Every attempt, newest first</caption>

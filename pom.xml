@@ -69,6 +69,12 @@
             <classifier>${native.platform}</classifier>
         </dependency>
 
+        <!-- Tiger Cloud (Timescale) stores saved attempts -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

@@ -56,7 +56,7 @@ public class DrillController {
     @PostMapping("/api/progress")
     public Progress.View progress(@RequestBody(required = false) PersonRequest req) {
         String person = AttemptService.cleanName(req == null ? null : req.person());
-        return Progress.of(person, history.forPerson(person));
+        return Progress.of(person, history.forPerson(person), history.daily(person), history.storage());
     }
 
     /** Everyone with saved attempts, most recent first. */

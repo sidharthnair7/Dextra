@@ -13,7 +13,9 @@ export interface MetricTrend {
   values: number[]; first: number | null; latest: number | null; best: number | null; change: number | null; improved: boolean | null
 }
 
-export interface ProgressView { person: string; attempts: number; scored: number; refused: number; metrics: MetricTrend[]; history: AttemptRecord[] }
+export interface Day { day: string; attempts: number; scored: number; accuracy: number | null; smoothness: number | null; speed: number | null; coverage: number | null }
+
+export interface ProgressView { person: string; attempts: number; scored: number; refused: number; metrics: MetricTrend[]; history: AttemptRecord[]; daily: Day[]; storage: string | null }
 
 export interface Person { person: string; attempts: number; last: string }
 

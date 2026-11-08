@@ -28,7 +28,8 @@ Webcam -> Java (Spring Boot) ------------------------------> Browser (Three.js)
           | finger lock: point between 2 fingers + gap
           | drill + scorer: hits, 4 numbers, refusals
           | setup check: Java decides pass/fail
-          | attempt log: ~/.dextra/attempts.jsonl
+          | attempt log: Tiger Cloud hypertable ----------------> Tiger Cloud (Timescale)
+          |   (or ~/.dextra/attempts.jsonl without one)
           | Gemini coach: explains only ---------------------> Gemini API
 ```
 
@@ -52,6 +53,12 @@ You need **Java 17 or newer** and **Maven**. The webcam must not be in use by an
    GEMINI_API_KEY=your-key-here
    ```
    Without a key, the coach and setup advice fall back to offline text written from the same numbers.
+
+   Optional, for Tiger Data: add your Tiger Cloud connection string to `.env` too:
+   ```
+   TIGER_DATABASE_URL=postgres://user:password@host:port/tsdb?sslmode=require
+   ```
+   DEXTRA creates the `dextra_attempts` hypertable on startup. Without it, or if it can't connect, attempts go to `~/.dextra/attempts.jsonl`.
 2. Start it:
    ```bash
    mvn spring-boot:run
@@ -67,12 +74,18 @@ Tip: put a light in front of you, not behind. Dim rooms can drop the webcam to 1
 mvn test
 ```
 
-55 tests cover the hand finder on real photos, scoring on synthetic paths with known answers (clean, shaky, stop-and-go, unreliable), refusals, the pinch detector, the finger lock, saving history, the progress trends and the API.
+57 tests cover the hand finder on real photos, scoring on synthetic paths with known answers (clean, shaky, stop-and-go, unreliable), refusals, the pinch detector, the finger lock, saving history, the progress trends and the API.
 
 To check your Gemini key works before a demo (numbers only, no camera frame):
 
 ```bash
 DEXTRA_LIVE_GEMINI=1 mvn test -Dtest=GeminiLiveCheck
+```
+
+To check Tiger Cloud (writes one test attempt, reads it back, then deletes it):
+
+```bash
+DEXTRA_LIVE_TIGER=1 mvn test -Dtest=TigerLiveCheck
 ```
 
 ## API
@@ -86,14 +99,14 @@ DEXTRA_LIVE_GEMINI=1 mvn test -Dtest=GeminiLiveCheck
 | `GET /api/attempts/{id}` | one attempt: points, hits, numbers, refusals, coach feedback |
 | `GET /api/fingers`, `POST /api/fingers` | read or set the two fingers; body `{"fingers": ["thumb", "index"]}` |
 | `POST /api/fingers/listen` | watch for the 3-pinch gesture (30 s) |
-| `POST /api/progress` | clinic mode for one person; body `{"person": "Sam"}` |
+| `POST /api/progress` | clinic mode for one person, with a by-day view; body `{"person": "Sam"}` |
 | `GET /api/people` | everyone with saved attempts |
 | `GET /api/camera.mjpg` | the mirrored camera preview |
 | `ws /ws/live` | live messages: `point`, `hit`, `attemptEnded`, `feedback`, `pinch`, `fingersLocked`, `status` |
 
 ## Privacy
 
-Everything runs on your laptop. Saved attempts live in one file, `~/.dextra/attempts.jsonl`. The only thing sent out is to Gemini, and only when a key is set: your numbers for the coach, and one camera frame for the setup check.
+Tracking and scoring run on your laptop. Saved attempts (name, fingers, the four numbers or the refusal reason) go to your own Tiger Cloud database when `TIGER_DATABASE_URL` is set, otherwise to one local file, `~/.dextra/attempts.jsonl`. Gemini gets your numbers for the coach, and one camera frame for the setup check, only when a key is set. No video is ever saved.
 
 ## Limits
 
@@ -103,4 +116,4 @@ Everything runs on your laptop. Saved attempts live in one file, `~/.dextra/atte
 
 ## Built with
 
-Java 17, Spring Boot, JavaCV and OpenCV, MediaPipe's palm and hand landmark models (via OpenCV Zoo), Three.js, and the Google Gemini API.
+Java 17, Spring Boot, JavaCV and OpenCV, MediaPipe's palm and hand landmark models (via OpenCV Zoo), Three.js, the Google Gemini API, and Tiger Cloud (TimescaleDB).

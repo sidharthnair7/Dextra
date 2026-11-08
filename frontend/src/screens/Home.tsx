@@ -147,7 +147,7 @@ export default function Home() {
           <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-5 py-14 sm:px-8 lg:grid-cols-4">
             {[
               { to: 30, suffix: '', label: 'frames a second, tracked in Java' },
-              { to: 55, suffix: '', label: 'automated tests passing' },
+              { to: 57, suffix: '', label: 'automated tests passing' },
               { to: 4, suffix: '', label: 'numbers, each with its formula' },
               { to: 80, suffix: '%', label: 'tracked, or it refuses to score' },
             ].map(n => (
@@ -189,7 +189,7 @@ export default function Home() {
             <ul className="space-y-4 text-white/85">
               <li><b className="text-white">Gemini explains, Java decides.</b> The model never sets a score or a pass.</li>
               <li><b className="text-white">Any two fingers.</b> The model invents points for missing fingers, so you choose yours.</li>
-              <li><b className="text-white">Stays on the laptop.</b> History is one local file. Gemini gets numbers, plus one frame for the setup check.</li>
+              <li><b className="text-white">You know where data goes.</b> Attempts go to your own Tiger Cloud database (or a local file without one). Gemini gets numbers, plus one frame for the setup check.</li>
               <li><b className="text-white">Honest limits.</b> A webcam sees in 2D, and it isn't validated with medical students yet.</li>
             </ul>
           </div>

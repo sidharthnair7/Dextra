@@ -57,4 +57,29 @@ class AttemptLogTest {
         log.append(rec("1", "Sam", true, 60.0));
         assertEquals(1, log.forPerson("Sam").size());
     }
+    @Test
+    void tigerConnectionStringBecomesJdbc() {
+        String[] j = AttemptLog.toJdbc("postgres://tsdbadmin:p%40ss@host.example.com:33597/tsdb?sslmode=require");
+        assertEquals("jdbc:postgresql://host.example.com:33597/tsdb?sslmode=require&connectTimeout=10&socketTimeout=20", j[0]);
+        assertEquals("tsdbadmin", j[1]);
+        assertEquals("p@ss", j[2]);
+    }
+
+    @Test
+    void dailyGroupsAttemptsByDayAndAveragesOnlyScoredOnes() {
+        AttemptLog log = AttemptLog.memoryOnly();
+        log.append(new AttemptRecord("a", "Sam", "2026-11-07T10:00:00Z", "done", true, null, 60.0, 40.0, 2.0, 90.0, 5, 0, List.of("thumb", "index")));
+        log.append(new AttemptRecord("b", "Sam", "2026-11-07T12:00:00Z", "done", true, null, 80.0, 60.0, 1.0, 100.0, 5, 0, List.of("thumb", "index")));
+        log.append(new AttemptRecord("c", "Sam", "2026-11-08T09:00:00Z", "timeout", false, "course not finished (1 of 5 targets)", null, null, null, 70.0, 1, 0, List.of("thumb", "index")));
+        List<AttemptLog.Day> days = log.daily("sam");
+        assertEquals(2, days.size());
+        assertEquals("2026-11-07", days.get(0).day());
+        assertEquals(2, days.get(0).attempts());
+        assertEquals(70.0, days.get(0).accuracy());
+        assertEquals(1.5, days.get(0).speed());
+        assertEquals(1, days.get(1).attempts());
+        assertEquals(0, days.get(1).scored());
+        assertNull(days.get(1).accuracy());
+        assertEquals("memory", log.storage());
+    }
 }
