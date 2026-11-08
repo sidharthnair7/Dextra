@@ -82,7 +82,25 @@
   .edge.on { opacity: 1; animation: blink .8s ease-in-out infinite; }
   @keyframes blink { 50% { opacity: .35; } }
   #cam .cap { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+  @media (max-width: 1100px) { #cam { width: 150px; } #controls { left: auto; right: 16px; transform: none; } }
   @media (max-width: 720px) { #cam { width: 132px; bottom: 92px; } #cam .cap { display: none; } #chips { max-width: calc(100vw - 32px); top: 96px; right: 16px; left: 16px; justify-content: flex-start; } #results { top: 150px; } }
+  #fingers { top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(440px, calc(100vw - 32px)); padding: 18px; display: none; z-index: 5; }
+  #fingers.open { display: block; }
+  #fingers h2 { margin: 0 0 4px; font-size: 16px; }
+  #fingers .sub { color: var(--muted); font-size: 12.5px; margin: 0 0 8px; }
+  .hand { display: flex; justify-content: center; align-items: flex-end; gap: 8px; height: 124px; margin: 10px 0 12px; }
+  .finger { width: 64px; padding: 0 0 10px; display: flex; align-items: flex-end; justify-content: center; border-radius: 24px 24px 12px 12px; font-size: 12px; }
+  .finger[data-f="thumb"] { height: 60px; margin-right: 8px; }
+  .finger[data-f="index"] { height: 100px; }
+  .finger[data-f="middle"] { height: 116px; }
+  .finger[data-f="ring"] { height: 102px; }
+  .finger[data-f="pinky"] { height: 78px; }
+  .finger[aria-pressed="true"] { background: var(--accent); color: #140a05; border-color: transparent; }
+  .finger.candidate { outline: 2px dashed var(--accent); outline-offset: 3px; }
+  .pinchstatus { font-weight: 650; font-variant-numeric: tabular-nums; }
+  #fingers .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  .fdot { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: #7cb8ff; color: #0b0e13;
+    font: 700 10px/16px system-ui, sans-serif; text-align: center; box-shadow: 0 0 0 2px #fff; display: none; }
   @media (prefers-reduced-motion: reduce) { #results { transition: none; } }
 </style>
 </head>
@@ -110,7 +128,23 @@
   <div id="resultsBody"></div>
 </aside>
 
+<aside id="fingers" class="panel" role="dialog" aria-modal="false" aria-labelledby="fingersTitle">
+  <h2 id="fingersTitle">Pick your two fingers</h2>
+  <p class="sub">Use whichever two fingers you have. Pinch them together 3 times, or tap two below and lock them.</p>
+  <div id="pinchStatus" class="pinchstatus" aria-live="polite">Watching for 3 pinches…</div>
+  <div class="hand" role="group" aria-label="Your fingers">
+    <button class="finger" data-f="thumb" aria-pressed="false">Thumb</button>
+    <button class="finger" data-f="index" aria-pressed="false">Index</button>
+    <button class="finger" data-f="middle" aria-pressed="false">Middle</button>
+    <button class="finger" data-f="ring" aria-pressed="false">Ring</button>
+    <button class="finger" data-f="pinky" aria-pressed="false">Pinky</button>
+  </div>
+  <div id="lockStatus" class="sub" aria-live="polite"></div>
+  <div class="row"><button id="lockBtn" class="primary" disabled>Lock these two</button><button id="fingersDone">Done</button></div>
+</aside>
+
 <div id="controls" class="panel">
+  <button id="fingersBtn" aria-haspopup="dialog">Fingers: Thumb + Index</button>
   <button id="checkBtn">Setup check</button>
   <button id="startBtn" class="primary">Start drill</button>
   <div id="progress" aria-live="polite"><b id="hitCount">0</b> / 5 targets · <span id="timer">0.0</span> s</div>
@@ -120,6 +154,7 @@
   <div class="camwrap" id="camWrap">
     <img id="camImg" alt="Your camera, mirrored. It stays on this laptop.">
     <span class="tipdot" id="camTip"></span>
+    <span class="fdot" id="fdotA">T</span><span class="fdot" id="fdotB">I</span>
     <span class="edge top"></span><span class="edge bottom"></span><span class="edge left"></span><span class="edge right"></span>
     <div class="off">Camera preview unavailable</div>
   </div>
@@ -410,6 +445,16 @@ function onPoint(m) {
     if (!lostSince) lostSince = performance.now();
     tip.style.display = 'none';
   }
+  showFingerDots(handFound ? m.tips : null);
+}
+
+// The two locked fingertips as small dots on the camera view (letters: T, I, M, R, P).
+function showFingerDots(tips) {
+  ['fdotA', 'fdotB'].forEach((id, i) => {
+    const dot = $(id), k = FINGERS.indexOf(lockedFingers[i]);
+    if (!tips || k < 0) { dot.style.display = 'none'; return; }
+    dot.style.display = 'block'; dot.style.left = (tips[k][0] * 100) + '%'; dot.style.top = (tips[k][1] * 100) + '%';
+  });
 }
 
 // Which camera edge the hand most likely left from. The palm sits below the fingertip, so the hand
@@ -471,6 +516,9 @@ function connect() {
     else if (m.type === 'hit') onHit(m);
     else if (m.type === 'attemptEnded') onEnded(m);
     else if (m.type === 'feedback') onFeedback(m);
+    else if (m.type === 'pinch') onPinch(m);
+    else if (m.type === 'fingersLocked') onFingersLocked(m);
+    else if (m.type === 'pinchStopped') $('pinchStatus').textContent = 'Stopped watching for pinches. Tap two fingers, or close and reopen to pinch again.';
   };
   ws.onopen = () => { setDot($('camDot'), 'warn'); if (wsDropped) { wsDropped = false; restartPreview(); } };
   ws.onclose = () => { wsDropped = true; $('camText').textContent = 'Backend offline, retrying'; setDot($('camDot'), 'bad'); setTimeout(connect, 1000); };
@@ -620,6 +668,67 @@ renderer.setAnimationLoop(() => {
 });
 
 connect(); refreshStatus(); setInterval(refreshStatus, 5000);
+// ---------- Finger picker: pinch the two fingers 3 times, or tap them. Java watches the pinches and keeps the lock. ----------
+const FINGERS = ['thumb', 'index', 'middle', 'ring', 'pinky'];
+const cap = s => s[0].toUpperCase() + s.slice(1);
+let lockedFingers = ['thumb', 'index'];
+let picked = [];
+function showLock(v) {
+  lockedFingers = v.fingers;
+  $('fingersBtn').textContent = `Fingers: ${cap(v.fingers[0])} + ${cap(v.fingers[1])}`;
+  $('fdotA').textContent = cap(v.fingers[0])[0]; $('fdotB').textContent = cap(v.fingers[1])[0];
+  setPicked(v.fingers);
+}
+function setPicked(list) {
+  picked = list.slice(0, 2);
+  document.querySelectorAll('.finger').forEach(b => b.setAttribute('aria-pressed', picked.includes(b.dataset.f) ? 'true' : 'false'));
+  $('lockBtn').disabled = picked.length !== 2;
+}
+function lockedMessage(v) {
+  const text = `Locked: ${cap(v.fingers[0])} + ${cap(v.fingers[1])} (${v.lockedBy === 'pinch' ? 'by pinch' : 'by tap'}). Not right? Tap two fingers and lock again.`;
+  $('lockStatus').textContent = text; $('pinchStatus').textContent = 'Locked.';
+  document.querySelectorAll('.finger').forEach(b => b.classList.remove('candidate'));
+  say(text);
+}
+document.querySelectorAll('.finger').forEach(b => {
+  b.onclick = () => {
+    const f = b.dataset.f;
+    if (picked.includes(f)) setPicked(picked.filter(x => x !== f));
+    else setPicked(picked.length < 2 ? [...picked, f] : [picked[1], f]);
+  };
+});
+$('lockBtn').onclick = async () => {
+  const r = await fetch('/api/fingers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fingers: picked }) });
+  const v = await r.json();
+  if (!r.ok) { $('lockStatus').textContent = v.error; return; }
+  showLock(v); lockedMessage(v);
+};
+function openFingers() {
+  $('fingers').classList.add('open');
+  $('lockStatus').textContent = '';
+  setPicked(lockedFingers);
+  $('pinchStatus').textContent = SIM ? 'Pinching needs the real camera. Tap two fingers.' : 'Watching for 3 pinches…';
+  document.querySelector('.finger').focus();
+  if (!SIM) fetch('/api/fingers/listen', { method: 'POST' });
+}
+function closeFingers() {
+  $('fingers').classList.remove('open');
+  fetch('/api/fingers/listen/stop', { method: 'POST' });
+  $('fingersBtn').focus();
+}
+$('fingersBtn').onclick = openFingers;
+$('fingersDone').onclick = closeFingers;
+addEventListener('keydown', e => { if (e.key === 'Escape' && $('fingers').classList.contains('open')) closeFingers(); });
+function onPinch(m) {
+  $('pinchStatus').textContent = `Pinch ${m.count} of ${m.of}: ${cap(m.fingers[0])} + ${cap(m.fingers[1])}`;
+  document.querySelectorAll('.finger').forEach(b => b.classList.toggle('candidate', m.fingers.includes(b.dataset.f)));
+}
+function onFingersLocked(m) {
+  showLock(m);
+  if ($('fingers').classList.contains('open')) lockedMessage(m);
+}
+fetch('/api/fingers').then(r => r.json()).then(showLock).catch(() => {});
+
 // ---------- Camera preview: the real camera, mirrored, streamed from Java on this laptop ----------
 function restartPreview() {
   const img = $('camImg');

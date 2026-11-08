@@ -62,6 +62,32 @@ class HandFinderTest {
         assertTrue(Math.abs(pose.fingertipY() - 28) < 20, "fingertip y " + pose.fingertipY());
     }
 
+    /** The finger picker's inputs from the real model: five fingertips in 0..1 units and a sensible palm width. */
+    @Test
+    void givesAllFiveFingertipsAndThePalmWidth() {
+        Path photo = Path.of("test-data", "pointing_up.jpg");
+        assumeTrue(Files.exists(photo), "test-data/pointing_up.jpg not present");
+        Mat image = imread(photo.toString());
+        HandPose pose = finder.find(image);
+        assertNotNull(pose, "no hand found");
+
+        double[] tips = pose.fingertips(image.cols(), image.rows());
+        double palm = pose.palmWidth(image.cols());
+        System.out.printf("tips(thumb..pinky)=%s palm=%.3f%n", java.util.Arrays.toString(
+                java.util.Arrays.stream(tips).map(v -> Math.round(v * 1000) / 1000.0).toArray()), palm);
+        assertEquals(10, tips.length);
+        for (double v : tips) {
+            assertTrue(v >= -0.05 && v <= 1.05, "tip outside the frame: " + v);
+        }
+        assertEquals(pose.fingertipX() / image.cols(), tips[2], 1e-9, "index tip is entry 1");
+        assertEquals(pose.fingertipY() / image.rows(), tips[3], 1e-9);
+        assertTrue(palm > 0.03 && palm < 0.6, "palm width " + palm);
+        // pointing up: the index tip is the highest fingertip in the picture
+        for (int k = 0; k < 5; k++) {
+            assertTrue(tips[3] <= tips[2 * k + 1] + 1e-9, "finger " + k + " is above the index tip");
+        }
+    }
+
     @Test
     void findsAHandInOtherPhotos() {
         for (String name : new String[]{"victory.jpg", "thumbs_up.jpg"}) {

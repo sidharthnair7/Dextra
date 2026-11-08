@@ -215,10 +215,12 @@ public class FingertipTracker implements SmartLifecycle {
                 prev = now;
                 fps = fps == 0 ? inst : 0.9 * fps + 0.1 * inst;
                 long t = (now - t0) / 1_000_000;
+                double w = mirrored.cols();
+                double h = mirrored.rows();
                 TrackPoint p = pose == null
                         ? new TrackPoint(t, false, 0, 0, 0, fps)
-                        : new TrackPoint(t, true, pose.fingertipX() / mirrored.cols(),
-                        pose.fingertipY() / mirrored.rows(), pose.confidence(), fps);
+                        : new TrackPoint(t, true, pose.fingertipX() / w, pose.fingertipY() / h, pose.confidence(), fps,
+                        pose.fingertips(w, h), pose.palmWidth(w));
                 last = p;
                 socket.broadcast(p.toJson());
                 for (TrackPointListener l : listeners) {
